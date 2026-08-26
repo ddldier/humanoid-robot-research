@@ -1,178 +1,162 @@
-# Humanoid Robot Research
+# BeyondMimic Motion Tracking Code
 
-人形机器人运动跟踪和控制研究项目，基于BeyondMimic框架。
+[![IsaacSim](https://img.shields.io/badge/IsaacSim-4.5.0-silver.svg)](https://docs.omniverse.nvidia.com/isaacsim/latest/overview.html)
+[![Isaac Lab](https://img.shields.io/badge/IsaacLab-2.1.0-silver)](https://isaac-sim.github.io/IsaacLab)
+[![Python](https://img.shields.io/badge/python-3.10-blue.svg)](https://docs.python.org/3/whatsnew/3.10.html)
+[![Linux platform](https://img.shields.io/badge/platform-linux--64-orange.svg)](https://releases.ubuntu.com/20.04/)
+[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit&logoColor=white)](https://pre-commit.com/)
+[![License](https://img.shields.io/badge/license-MIT-yellow.svg)](https://opensource.org/license/mit)
 
-## 📚 项目概述
+[[Website]](https://beyondmimic.github.io/)
+[[Arxiv]](https://arxiv.org/abs/2508.08241)
+[[Video]](https://youtu.be/RS_MtKVIAzY)
 
-这个仓库包含了人形机器人全身运动跟踪的完整研究代码，支持复杂动作学习（后空翻、飞踢、舞蹈等）和sim2real部署。
+## Overview
 
-## 🔬 版本说明
+BeyondMimic is a versatile humanoid control framework that provides highly dynamic motion tracking with the
+state-of-the-art motion quality on real-world deployment and steerable test-time control with guided diffusion-based
+controllers.
 
-本仓库包含两个主要版本：
+This repo covers the motion tracking training in BeyondMimic. **You should be able to
+train any sim-to-real-ready motion in the LAFAN1 dataset, without tuning any parameters**.
 
-### 主分支 (main) - V2增强版
-- **rewards.py**: 1091行 - 扩展的奖励函数系统
-- **新增功能**:
-  - 恢复状态奖励系统（R5机器人）
-  - 稳定性和平衡控制奖励
-  - 实验性reward_new.py和event_new.py
-  - 详细的中文注释
-- **适用**: 高级研究、鲁棒性控制、生产部署
+For sim-to-sim and sim-to-real deployment, please refer to
+the [motion_tracking_controller](https://github.com/HybridRobotics/motion_tracking_controller).
 
-### V1分支 (v1-basic) - 基础版
-- **rewards.py**: 82行 - 精简的基础版本
-- **包含**: 7种动作库完整实验数据
-- **适用**: 学习、基础研究、快速实验
+### Alternative Implementations
 
-## 🎯 主要功能
+- There is an alternative reproduction of BeyondMimic in [mjlab](https://github.com/mujocolab/mjlab), a new Isaac Lab-style manager API powered by MuJoCo-Warp for RL and robotics research. See the implementation [here](https://github.com/mujocolab/mjlab/blob/main/src/mjlab/tasks/tracking/tracking_env_cfg.py).
 
-### 运动跟踪奖励函数
+## Installation
 
-#### V2版本新增 (16个函数)
-1. **恢复状态系统**
-   - `_ensure_recovery_state()` - 恢复状态保证
-   - `_recovery_active_mask()` - 恢复激活掩码
-   - `recovery_step_sequence_reward()` - 恢复步序奖励
+- Install Isaac Lab v2.1.0 by following
+  the [installation guide](https://isaac-sim.github.io/IsaacLab/main/source/setup/installation/index.html). We recommend
+  using the conda installation as it simplifies calling Python scripts from the terminal.
 
-2. **稳定性控制**
-   - `quiet_double_support_exp()` - 安静双支撑
-   - `tail_balance_exp()` - 尾部平衡
-   - `tail_feet_slip_l2()` - 防滑控制
+- Clone this repository separately from the Isaac Lab installation (i.e., outside the `IsaacLab` directory):
 
-3. **运动优化**
-   - `leg_joint_velocity_outside_recovery_l2()` - 关节速度控制
-   - `lateral_root_velocity_deadzone_l2()` - 侧向速度死区
-
-#### 基础跟踪奖励
-- `motion_global_anchor_position_error_exp()` - 全局锚点位置
-- `motion_global_anchor_orientation_error_exp()` - 全局锚点方向
-- `motion_relative_body_position_error_exp()` - 相对身体位置
-- `motion_relative_body_orientation_error_exp()` - 相对身体方向
-- `motion_global_body_linear_velocity_error_exp()` - 全局线速度
-- `motion_global_body_angular_velocity_error_exp()` - 全局角速度
-
-## 🚀 快速开始
-
-### 环境要求
-- Python 3.10
-- NVIDIA Isaac Sim 4.5.0
-- Isaac Lab 2.1.0
-- PyTorch
-- CUDA支持的GPU
-
-### 安装
 ```bash
-# 克隆仓库
-git clone https://github.com/ddldier/humanoid-robot-research.git
-cd humanoid-robot-research
+# Option 1: SSH
+git clone git@github.com:HybridRobotics/whole_body_tracking.git
 
-# 安装依赖（需要先安装Isaac Lab）
-# 详见Isaac Lab官方文档
+# Option 2: HTTPS
+git clone https://github.com/HybridRobotics/whole_body_tracking.git
 ```
 
-### 训练
+- Pull the robot description files from GCS
+
 ```bash
-# 使用V2增强版训练
-python scripts/rsl_rl/train.py --task=Isaac-Velocity-Flat-G1-v0
-
-# 使用本地动作数据训练
-python scripts/rsl_rl/train_local_motion.py --motion=your_motion.npz
+# Enter the repository
+cd whole_body_tracking
+# Rename all occurrences of whole_body_tracking (in files/directories) to your_fancy_extension_name
+curl -L -o unitree_description.tar.gz https://storage.googleapis.com/qiayuanl_robot_descriptions/unitree_description.tar.gz && \
+tar -xzf unitree_description.tar.gz -C source/whole_body_tracking/whole_body_tracking/assets/ && \
+rm unitree_description.tar.gz
 ```
 
-### 评估
+- Using a Python interpreter that has Isaac Lab installed, install the library
+
 ```bash
-# 播放训练好的策略
-python scripts/rsl_rl/play.py --task=Isaac-Velocity-Flat-G1-v0 --checkpoint=model.pt
-
-# 导出ONNX模型
-python scripts/rsl_rl/play_export_local_motion.py --checkpoint=model.pt
+python -m pip install -e source/whole_body_tracking
 ```
 
-## 📁 项目结构
+## Motion Tracking
 
-```
-humanoid-robot-research/
-├── source/                              # 源代码
-│   └── whole_body_tracking/
-│       └── tasks/tracking/
-│           ├── mdp/                     # MDP定义
-│           │   ├── rewards.py          # V2: 1091行奖励函数
-│           │   ├── reward_new.py       # 实验性新奖励
-│           │   ├── events.py           # 事件处理
-│           │   ├── event_new.py        # 实验性新事件
-│           │   ├── commands.py         # 命令生成
-│           │   └── terminations.py     # 终止条件
-│           └── config/                  # 环境配置
-│               └── g1/                  # G1机器人配置
-│                   ├── flat_env_cfg.py
-│                   ├── flat_env_cfg_wo_state.py
-│                   ├── robust_env_cfg.py
-│                   ├── getup_env_cfg.py
-│                   └── getup_only_env_cfg.py
-├── scripts/                             # 训练和评估脚本
-│   ├── rsl_rl/
-│   │   ├── train.py                    # 训练脚本
-│   │   ├── play.py                     # 播放脚本
-│   │   ├── train_local_motion.py       # 本地动作训练
-│   │   └── play_export_local_motion.py # 导出脚本
-│   ├── csv_to_npz_g9_exactfps.py       # 动作转换工具
-│   └── validate_motion_npz.py          # 动作验证工具
-├── README.md                            # 本文件
-└── README_V2.md                         # V2版本详细说明
+### Motion Preprocessing & Registry Setup
+
+In order to manage the large set of motions we used in this work, we leverage the WandB registry to store and load
+reference motions automatically.
+Note: The reference motion should be retargeted and use generalized coordinates only.
+
+- Gather the reference motion datasets (please follow the original licenses), we use the same convention as .csv of
+  Unitree's dataset
+
+    - Unitree-retargeted LAFAN1 Dataset is available
+      on [HuggingFace](https://huggingface.co/datasets/lvhaidong/LAFAN1_Retargeting_Dataset)
+    - Sidekicks are from [KungfuBot](https://kungfu-bot.github.io/)
+    - Christiano Ronaldo celebration is from [ASAP](https://github.com/LeCAR-Lab/ASAP).
+    - Balance motions are from [HuB](https://hub-robot.github.io/)
+
+
+- Log in to your WandB account; access Registry under Core on the left. Create a new registry collection with the name "
+  Motions" and artifact type "All Types".
+
+
+- Convert retargeted motions to include the maximum coordinates information (body pose, body velocity, and body
+  acceleration) via forward kinematics,
+
+```bash
+python scripts/csv_to_npz.py --input_file {motion_name}.csv --input_fps 30 --output_name {motion_name} --headless
 ```
 
-## 🔬 研究成果
+This will automatically upload the processed motion file to the WandB registry with output name {motion_name}.
 
-### 支持的动作
-- 后空翻 (Backflip)
-- 飞踢 (Flying Kick)
-- 舞蹈动作 (Dance)
-- 出拳 (Punch)
-- 侧踢拳击 (Sidekick Boxing)
-- G9右飞踢
+- Test if the WandB registry works properly by replaying the motion in Isaac Sim:
 
-### 技术特点
-- Sim2Real部署流程
-- Isaac Sim ↔ MuJoCo跨仿真器验证
-- ONNX模型导出
-- 无状态估计版本支持
-
-## 📊 版本对比
-
-| 特性 | V1基础版 | V2增强版 |
-|------|----------|----------|
-| rewards.py | 82行 | 1,091行 |
-| 奖励函数 | 8个 | 16个 |
-| 恢复系统 | 基础 | 增强 |
-| 稳定性控制 | 基础 | 高级 |
-| 中文注释 | 无 | 详细 |
-| 实验功能 | 无 | reward_new.py, event_new.py |
-
-## 📖 相关项目
-
-- [humanoid-robot-deployment](https://github.com/ddldier/humanoid-robot-deployment) - 部署工具和资源
-- [HybridRobotics/whole_body_tracking](https://github.com/HybridRobotics/whole_body_tracking) - 上游项目
-
-## 📝 引用
-
-如果使用了BeyondMimic相关内容，请引用：
-```bibtex
-@article{beyondmimic2024,
-  title={BeyondMimic: Versatile Humanoid Control with Guided Diffusion},
-  journal={arXiv preprint arXiv:2508.08241},
-  year={2024}
-}
+```bash
+python scripts/replay_npz.py --registry_name={your-organization}-org/wandb-registry-motions/{motion_name}
 ```
 
-## 📄 许可证
+- Debugging
+    - Make sure to export WANDB_ENTITY to your organization name, not your personal username.
+    - If /tmp folder is not accessible, modify csv_to_npz.py L319 & L326 to a temporary folder of your choice.
 
-MIT License
+### Policy Training
 
-## 👥 贡献者
+- Train policy by the following command:
 
-- 王浩然 (ddldier)
+```bash
+python scripts/rsl_rl/train.py --task=Tracking-Flat-G1-v0 \
+--registry_name {your-organization}-org/wandb-registry-motions/{motion_name} \
+--headless --logger wandb --log_project_name {project_name} --run_name {run_name}
+```
 
----
+### Policy Evaluation
 
-**GitHub**: https://github.com/ddldier/humanoid-robot-research  
-**相关**: [humanoid-robot-deployment](https://github.com/ddldier/humanoid-robot-deployment)
+- Play the trained policy by the following command:
+
+```bash
+python scripts/rsl_rl/play.py --task=Tracking-Flat-G1-v0 --num_envs=2 --wandb_path={wandb-run-path}
+```
+
+The WandB run path can be located in the run overview. It follows the format {your_organization}/{project_name}/ along
+with a unique 8-character identifier. Note that run_name is different from run_path.
+
+## Code Structure
+
+Below is an overview of the code structure for this repository:
+
+- **`source/whole_body_tracking/whole_body_tracking/tasks/tracking/mdp`**
+  This directory contains the atomic functions to define the MDP for BeyondMimic. Below is a breakdown of the functions:
+
+    - **`commands.py`**
+      Command library to compute relevant variables from the reference motion, current robot state, and error
+      computations. This includes pose and velocity error calculation, initial state randomization, and adaptive
+      sampling.
+
+    - **`rewards.py`**
+      Implements the DeepMimic reward functions and smoothing terms.
+
+    - **`events.py`**
+      Implements domain randomization terms.
+
+    - **`observations.py`**
+      Implements observation terms for motion tracking and data collection.
+
+    - **`terminations.py`**
+      Implements early terminations and timeouts.
+
+- **`source/whole_body_tracking/whole_body_tracking/tasks/tracking/tracking_env_cfg.py`**
+  Contains the environment (MDP) hyperparameters configuration for the tracking task.
+
+- **`source/whole_body_tracking/whole_body_tracking/tasks/tracking/config/g1/agents/rsl_rl_ppo_cfg.py`**
+  Contains the PPO hyperparameters for the tracking task.
+
+- **`source/whole_body_tracking/whole_body_tracking/robots`**
+  Contains robot-specific settings, including armature parameters, joint stiffness/damping calculation, and action scale
+  calculation.
+
+- **`scripts`**
+  Includes utility scripts for preprocessing motion data, training policies, and evaluating trained policies.
+
+This structure is designed to ensure modularity and ease of navigation for developers expanding the project.
