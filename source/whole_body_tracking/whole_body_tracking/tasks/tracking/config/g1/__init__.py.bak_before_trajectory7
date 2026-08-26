@@ -1,0 +1,109 @@
+import gymnasium as gym
+
+from . import agents, flat_env_cfg   #, robust_env_cfg
+
+##
+# Register Gym environments.
+##
+
+gym.register(
+    id="Tracking-Flat-G1-v0",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": flat_env_cfg.G1FlatEnvCfg,
+        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:G1FlatPPORunnerCfg",
+    },
+)
+
+gym.register(
+    id="Tracking-Flat-G1-Wo-State-Estimation-v0",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": flat_env_cfg.G1FlatWoStateEstimationEnvCfg,
+        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:G1FlatPPORunnerCfg",
+    },
+)
+
+
+
+gym.register(
+    id="Tracking-Flat-G1-Low-Freq-v0",
+    entry_point="isaaclab.envs:ManagerBasedRLEnv",
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": flat_env_cfg.G1FlatLowFreqEnvCfg,
+        "rsl_rl_cfg_entry_point": f"{agents.__name__}.rsl_rl_ppo_cfg:G1FlatLowFreqPPORunnerCfg",
+    },
+)
+
+gym.register(
+    id=(
+        "Tracking-Flat-G1-"
+        "Wo-State-Estimation-Robust-v0"
+    ),
+    entry_point=(
+        "isaaclab.envs:"
+        "ManagerBasedRLEnv"
+    ),
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": (
+            robust_env_cfg.
+            G1FlatWoStateEstimationRobustEnvCfg
+        ),
+        "rsl_rl_cfg_entry_point": (
+            f"{agents.__name__}."
+            "rsl_rl_ppo_cfg:"
+            "G1FlatPPORunnerCfg"
+        ),
+    },
+)
+
+# File:
+# source/whole_body_tracking/whole_body_tracking/tasks/tracking/config/g1/__init__.py
+#
+# Keep Robust-v0 registration unchanged.
+# For Punch-GetUp-v0, use the custom environment entry point below.
+
+gym.register(
+    id="Tracking-Flat-G1-Wo-State-Estimation-Punch-GetUp-v0",
+    entry_point=(
+        "whole_body_tracking.tasks.tracking.getup_env:"
+        "G1PunchGetUpEnv"
+    ),
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": (
+            f"{__name__}.getup_env_cfg:"
+            "G1FlatWoStateEstimationPunchGetUpEnvCfg"
+        ),
+        "rsl_rl_cfg_entry_point": (
+            f"{agents.__name__}.rsl_rl_ppo_cfg:"
+            "G1FlatPPORunnerCfg"
+        ),
+    },
+)
+
+gym.register(
+    id="Tracking-Flat-G1-Wo-State-Estimation-GetUp-Only-v0",
+    entry_point=(
+        "whole_body_tracking.tasks.tracking.getup_env:"
+        "G1PunchGetUpEnv"
+    ),
+    disable_env_checker=True,
+    kwargs={
+        "env_cfg_entry_point": (
+            f"{__name__}.getup_only_env_cfg:"
+            "G1FlatWoStateEstimationGetUpOnlyEnvCfg"
+        ),
+        "rsl_rl_cfg_entry_point": (
+            f"{agents.__name__}.rsl_rl_ppo_cfg:"
+            "G1FlatPPORunnerCfg"
+        ),
+    },
+)
+
+
+

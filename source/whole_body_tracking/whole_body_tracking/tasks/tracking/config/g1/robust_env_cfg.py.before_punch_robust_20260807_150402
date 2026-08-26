@@ -1,0 +1,223 @@
+from isaaclab.managers import EventTermCfg as EventTerm
+from isaaclab.managers import RewardTermCfg as RewTerm
+from isaaclab.managers import SceneEntityCfg
+from isaaclab.utils import configclass
+
+import whole_body_tracking.tasks.tracking.mdp as mdp
+
+from whole_body_tracking.tasks.tracking.tracking_env_cfg import (
+    EventCfg,
+    RewardsCfg,
+)
+
+from .flat_env_cfg import (
+    G1FlatWoStateEstimationEnvCfg,
+)
+
+
+FEET = [
+    "left_ankle_roll_link",
+    "right_ankle_roll_link",
+]
+
+
+@configclass
+class RobustRewardsCfg(RewardsCfg):
+    """Original WBT rewards plus disturbance recovery terms."""
+
+    tail_balance = RewTerm(
+        func=mdp.tail_balance_exp,
+        weight=1.5,
+        params={
+            "command_name": "motion",
+            "sensor_cfg": SceneEntityCfg(
+                "contact_forces",
+                body_names=FEET,
+            ),
+            "asset_cfg": SceneEntityCfg(
+                "robot",
+                body_names=FEET,
+            ),
+            "start_phase": 0.75,
+            "contact_threshold": 10.0,
+            "tilt_std": 0.25,
+            "velocity_std": 0.50,
+        },
+    )
+
+    tail_feet_slip = RewTerm(
+        func=mdp.tail_feet_slip_l2,
+        weight=-0.20,
+        params={
+            "command_name": "motion",
+            "sensor_cfg": SceneEntityCfg(
+                "contact_forces",
+                body_names=FEET,
+            ),
+            "asset_cfg": SceneEntityCfg(
+                "robot",
+                body_names=FEET,
+            ),
+            "start_phase": 0.75,
+            "contact_threshold": 10.0,
+        },
+    )
+
+    joint_acceleration = RewTerm(
+        func=mdp.joint_acc_l2,
+        weight=-1.0e-7,
+        params={
+            "asset_cfg": SceneEntityCfg(
+                "robot",
+                joint_names=[".*"],
+            )
+        },
+    )
+
+    joint_torque = RewTerm(
+        func=mdp.joint_torques_l2,
+        weight=-2.0e-6,
+        params={
+            "asset_cfg": SceneEntityCfg(
+                "robot",
+                joint_names=[".*"],
+            )
+        },
+    )
+
+    termination_penalty = RewTerm(
+        func=mdp.is_terminated,
+        weight=-2.0,
+    )
+
+
+@configclass
+class RobustEventCfg(EventCfg):
+    """Domain randomization and impact events."""
+
+    body_mass = EventTerm(
+        func=mdp.randomize_rigid_body_mass,
+        mode="startup",
+        params={
+            "asset_cfg": SceneEntityCfg(
+                "robot",
+                body_names=".*",
+            ),
+            "mass_distribution_params": (
+                0.90,
+                1.10,
+            ),
+            "operation": "scale",
+            "recompute_inertia": True,
+        },
+    )
+
+    actuator_gains = EventTerm(
+        func=mdp.randomize_actuator_gains,
+        mode="startup",
+        params={
+            "asset_cfg": SceneEntityCfg(
+                "robot",
+                joint_names=[".*"],
+            ),
+            "stiffness_distribution_params": (
+                0.85,
+                1.15,
+            ),
+            "damping_distribution_params": (
+                0.85,
+                1.15,
+            ),
+            "operation": "scale",
+        },
+    )
+
+    attack_reaction = EventTerm(
+        func=mdp.phase_push_by_setting_velocity,
+        mode="interval",
+        interval_range_s=(0.60, 1.20),
+        params={
+            "command_name": "motion",
+            "phase_range": (
+                0.20,
+                0.80,
+            ),
+            "probability": 0.35,
+            "velocity_range": {
+                "x": (-0.60, 0.60),
+                "y": (-0.60, 0.60),
+                "z": (-0.15, 0.15),
+                "roll": (-0.60, 0.60),
+                "pitch": (-0.60, 0.60),
+                "yaw": (-0.80, 0.80),
+            },
+            "asset_cfg": SceneEntityCfg("robot"),
+        },
+    )
+
+
+@configclass
+class G1FlatWoStateEstimationRobustEnvCfg(
+    G1FlatWoStateEstimationEnvCfg
+):
+    """One end-to-end motion policy with disturbance recovery."""
+
+    rewards: RobustRewardsCfg = RobustRewardsCfg()
+    events: RobustEventCfg = RobustEventCfg()
+
+    def __post_init__(self):
+        super().__post_init__()
+
+        # Initial-state perturbation around sampled motion frames.
+        self.commands.motion.pose_range = {
+            "x": (-0.08, 0.08),
+            "y": (-0.08, 0.08),
+            "z": (-0.03, 0.03),
+            "roll": (-0.18, 0.18),
+            "pitch": (-0.18, 0.18),
+            "yaw": (-0.30, 0.30),
+        }
+
+        self.commands.motion.velocity_range = {
+            "x": (-0.70, 0.70),
+            "y": (-0.70, 0.70),
+            "z": (-0.25, 0.25),
+            "roll": (-0.70, 0.70),
+            "pitch": (-0.70, 0.70),
+            "yaw": (-1.00, 1.00),
+        }
+
+        self.commands.motion.joint_position_range = (
+            -0.15,
+            0.15,
+        )
+
+        # Existing all-phase random push.
+        self.events.push_robot.interval_range_s = (
+            1.0,
+            2.5,
+        )
+
+        self.events.push_robot.params[
+            "velocity_range"
+        ] = {
+            "x": (-0.50, 0.50),
+            "y": (-0.50, 0.50),
+            "z": (-0.15, 0.15),
+            "roll": (-0.45, 0.45),
+            "pitch": (-0.45, 0.45),
+            "yaw": (-0.65, 0.65),
+        }
+
+        # Allow large but recoverable deviations.
+        self.terminations.anchor_pos.params[
+            "threshold"
+        ] = 0.35
+
+        self.terminations.anchor_ori.params[
+            "threshold"
+        ] = 1.10
+
+        self.terminations.ee_body_pos.params[
+            "threshold"
+        ] = 0.35
